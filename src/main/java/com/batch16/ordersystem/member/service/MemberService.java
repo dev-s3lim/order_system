@@ -38,7 +38,7 @@ public class MemberService {
     public Member doLogin(MemberLoginReqDto loginReqDto) {
         Optional<Member> optionalAuthor = memberRepository.findByEmail(loginReqDto.getEmail());
         boolean check = true;
-        if (optionalAuthor.isPresent()){
+        if (optionalAuthor.isPresent()) {
             check = false;
         }
         if (check) {
@@ -57,6 +57,11 @@ public class MemberService {
         Member member = memberRepository.findById(id).orElseThrow(() -> new NoSuchElementException("존재하지 않는 회원입니다."));
         MemberDetailDto memberDetailDto = MemberDetailDto.fromEntity(member);
         return memberDetailDto;
+    }
+
+    @Transactional (readOnly = true)
+    public Member findByEmail(String email) throws NoSuchElementException {
+        return memberRepository.findByEmail(email).orElseThrow(() -> new NoSuchElementException("존재하지 않는 회원입니다."));
     }
 
     @Transactional(readOnly = true)

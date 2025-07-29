@@ -1,5 +1,6 @@
 package com.batch16.ordersystem.member.domain;
 
+import com.batch16.ordersystem.common.domain.BaseTimeEntity;
 import com.batch16.ordersystem.member.dto.MemberListDto;
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,7 +13,7 @@ import org.hibernate.annotations.Where;
 @Builder
 //jpql을 제외하고, 모든 조회 쿼리에 where del_yn = 'N' 붙이는 효과
 @Where(clause = "del_yn = 'N'")
-public class Member {
+public class Member extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

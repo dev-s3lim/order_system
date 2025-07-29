@@ -3,10 +3,7 @@ package com.batch16.ordersystem.member.controller;
 import com.batch16.ordersystem.common.auth.JwtTokenProvider;
 import com.batch16.ordersystem.common.dto.CommonDto;
 import com.batch16.ordersystem.member.domain.Member;
-import com.batch16.ordersystem.member.dto.MemberCreateDto;
-import com.batch16.ordersystem.member.dto.MemberListDto;
-import com.batch16.ordersystem.member.dto.MemberLoginReqDto;
-import com.batch16.ordersystem.member.dto.MemberLoginResDto;
+import com.batch16.ordersystem.member.dto.*;
 import com.batch16.ordersystem.member.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +13,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 @RestController
 @RequiredArgsConstructor
@@ -40,12 +36,24 @@ public class MemberController {
 
     // rt를 통한 at 토큰 재발급 (갱신)
     @PostMapping("/refresh-at")
-    public ResponseEntity<?> generateNewAt(){
+    public ResponseEntity<?> generateNewAt(@RequestBody RefreshTokenDto refreshTokenDto) {
         // rt 검증 로직
-
+        Member member = jwtTokenProvider.validateRt(refreshTokenDto.getRefreshToken());
+        // db의 기존 rt와 비교하여 일치하는지 확인
+        String accessToken = jwtTokenProvider.createAtToken(member);
         // at 신규 생성 로직
+        MemberLoginResDto memberLoginResDto = MemberLoginResDto.builder()
+                .accessToken(accessToken)
+                .build();
 
-        return null;
+        return new ResponseEntity<>(
+                CommonDto.builder()
+                        .result(memberLoginResDto)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("새로운 access token 발급 성공")
+                        .build(),
+                HttpStatus.OK
+        );
     }
 
     @GetMapping("/list")

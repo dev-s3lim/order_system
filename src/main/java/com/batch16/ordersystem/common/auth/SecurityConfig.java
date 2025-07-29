@@ -36,7 +36,7 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(jwtAuthorizationHandler) // [예외처리] 인증 실패 시
                         .accessDeniedHandler(jwtAuthenticationHandler))
                 .authorizeHttpRequests(a -> a
-                        .requestMatchers("/member/create", "/member/doLogin").permitAll()
+                        .requestMatchers("/member/create", "/member/doLogin", "/member/refresh-at").permitAll()
                         .requestMatchers("/member/delete/**").hasRole("USER") // 이거 없으면 접근 거절됨
                         .anyRequest().authenticated()
                 )
