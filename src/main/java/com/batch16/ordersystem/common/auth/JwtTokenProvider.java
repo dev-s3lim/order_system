@@ -50,7 +50,7 @@ public class JwtTokenProvider {
 
         String email = member.getEmail();
         String name = member.getName();
-        String role = member.getRole();
+        String role = member.getRole().toString();
 
         Claims claims = Jwts.claims().setSubject(email);
         claims.put("name", name);
@@ -94,7 +94,7 @@ public class JwtTokenProvider {
     public String createRtToken(Member member){
         String email = member.getEmail();
         String name = member.getName();
-        String role = member.getRole();
+        String role = member.getRole().toString();
 
         Claims claims = Jwts.claims().setSubject(email);
         claims.put("name", name);

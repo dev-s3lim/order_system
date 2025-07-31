@@ -2,10 +2,6 @@ package com.batch16.ordersystem.product.dto;
 
 import com.batch16.ordersystem.member.domain.Member;
 import com.batch16.ordersystem.product.domain.Product;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

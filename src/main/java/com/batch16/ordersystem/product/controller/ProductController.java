@@ -4,6 +4,7 @@ import com.batch16.ordersystem.common.dto.CommonDto;
 import com.batch16.ordersystem.product.dto.ProductCreateDto;
 import com.batch16.ordersystem.product.dto.ProductResDto;
 import com.batch16.ordersystem.product.dto.ProductSearchDto;
+import com.batch16.ordersystem.product.dto.ProductUpdateDto;
 import com.batch16.ordersystem.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -44,7 +45,6 @@ public class ProductController {
                         .build(),
                 HttpStatus.OK
         );
-
     }
 
     @GetMapping("/detail/{id}")
@@ -57,6 +57,20 @@ public class ProductController {
                         .statusMessage("상품상세조회성공")
                         .build(),
                 HttpStatus.OK
+        );
+    }
+
+    // 이미 등록된 상품 수정을 위한 컨트롤러
+    @PutMapping("/update/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> productUpdate(@PathVariable Long id, @ModelAttribute ProductUpdateDto dto) {
+        Long updatedId = productService.productUpdate(id, dto);
+        return ResponseEntity.ok(
+                CommonDto.builder()
+                        .result(updatedId)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("상품수정완료")
+                        .build()
         );
     }
 }

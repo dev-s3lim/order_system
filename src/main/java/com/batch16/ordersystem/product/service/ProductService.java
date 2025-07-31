@@ -6,6 +6,7 @@ import com.batch16.ordersystem.product.domain.Product;
 import com.batch16.ordersystem.product.dto.ProductCreateDto;
 import com.batch16.ordersystem.product.dto.ProductResDto;
 import com.batch16.ordersystem.product.dto.ProductSearchDto;
+import com.batch16.ordersystem.product.dto.ProductUpdateDto;
 import com.batch16.ordersystem.product.repository.ProductRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -14,6 +15,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +32,7 @@ import java.util.List;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class ProductService {
     private final ProductRepository productRepository;
     private final MemberRepository memberRepository;
@@ -57,6 +60,9 @@ public class ProductService {
                 e.printStackTrace(); // 예외 원인 콘솔에 출력
                 throw new IllegalArgumentException("프로필 이미지 업로드 중 오류가 발생했습니다.", e);
             }
+
+            // !!** 이미지 삭제 시 **!!
+            // s3Client.deleteObject(a -> a.bucket("batch16-test").key(fileName));
 
             String imgUrl = s3Client.utilities().getUrl(a -> a.bucket(bucket).key(fileName)).toExternalForm();
             product.updateImageUrl(imgUrl);
@@ -95,4 +101,36 @@ public class ProductService {
         return ProductResDto.fromEntity(product);
     }
 
+    // 이미 등록된 상품 수정을 위한 비즈니스 로직
+    public Long productUpdate(Long targetId, ProductUpdateDto productUpdateDto) {
+        Product target = productRepository.findById(targetId).orElseThrow(() -> new EntityNotFoundException("존재하지 않는 상품입니다."));
+        target.updateProduct(productUpdateDto);
+        String targetFileName = target.getImagePath().substring(target.getImagePath().lastIndexOf("/")+1);
+
+
+        if (productUpdateDto.getProductImage() != null &&!productUpdateDto.getProductImage().isEmpty()) {
+            // 이미지 삭제 후 다시 저장
+            s3Client.deleteObject(a -> a.bucket(bucket).key(targetFileName));
+
+            String fileName = "product-" + target.getId() + "-productImage-" + productUpdateDto.getProductImage().getOriginalFilename();
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(fileName)
+                    .contentType(productUpdateDto.getProductImage().getContentType())
+                    .build();
+
+            try {
+                s3Client.putObject(putObjectRequest, RequestBody.fromBytes(productUpdateDto.getProductImage().getBytes()));
+            } catch (Exception e) {
+                log.error(e.getMessage());
+                throw new IllegalArgumentException("이미지 업로드 실패");
+            }
+
+            String imgUrl = s3Client.utilities().getUrl(a -> a.bucket(bucket).key(fileName)).toExternalForm();
+            target.updateImageUrl(imgUrl);
+        } else {
+            target.updateImageUrl(null);
+        }
+        return target.getId();
+    }
 }

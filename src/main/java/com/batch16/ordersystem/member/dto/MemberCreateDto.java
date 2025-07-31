@@ -1,6 +1,9 @@
 package com.batch16.ordersystem.member.dto;
 
+import com.batch16.ordersystem.common.constant.Role;
 import com.batch16.ordersystem.member.domain.Member;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -20,8 +23,13 @@ public class MemberCreateDto {
     @NotEmpty(message = "고객님의 비밀번호를 입력해 주세요")
     @Size(min = 8, message = "비밀번호가 너무 짧습니다. 8자 이상 입력해 주세요.")
     private String password;
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private Role role = Role.USER;
+    /*
     @Builder.Default
     private String role = "USER";
+     */
 
     public Member toEntity(String encodedPassword) {
         return Member.builder()

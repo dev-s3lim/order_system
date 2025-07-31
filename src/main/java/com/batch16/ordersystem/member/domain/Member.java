@@ -1,5 +1,6 @@
 package com.batch16.ordersystem.member.domain;
 
+import com.batch16.ordersystem.common.constant.Role;
 import com.batch16.ordersystem.common.domain.BaseTimeEntity;
 import com.batch16.ordersystem.member.dto.MemberListDto;
 import jakarta.persistence.*;
@@ -8,6 +9,7 @@ import org.hibernate.annotations.Where;
 
 @Entity
 @Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
@@ -25,8 +27,13 @@ public class Member extends BaseTimeEntity {
     private String password;
     @Builder.Default
     private String delYn = "N";
+    @Enumerated(EnumType.STRING)
     @Builder.Default
+    private Role role = Role.USER;
+    /* @Builder.Default
     private String role = "USER";
+
+     */
 
     public void delete(String delYn) {
         this.delYn = delYn;
