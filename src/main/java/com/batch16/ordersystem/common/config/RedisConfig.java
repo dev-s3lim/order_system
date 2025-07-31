@@ -1,6 +1,5 @@
 package com.batch16.ordersystem.common.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -11,52 +10,54 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-//무조건 redisTemplate이라는 메서드명이 1개는 있어야함
 @Configuration
 public class RedisConfig {
-
-    @Value("${spring.redis.host}") // key 대소문자 주의
+    @Value("${spring.redis.host}")
     private String host;
-    @Value("${spring.redis.port}") // key 대소문자 주의
+    @Value("${spring.redis.port}")
     private int port;
 
     @Bean
+    // Qualifier: 같은 Bean 객체가 여러개 있을 경우 Bean 객체를 구분하기 위한 어노테이션
     @Qualifier("rtInventory")
-    public RedisConnectionFactory redisConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
-        config.setHostName(host);
-        config.setPort(port);
-        config.setDatabase(0);
-        return new LettuceConnectionFactory(config);
+    public RedisConnectionFactory redisConnectionFactory(){
+        RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
+        configuration.setHostName(host);
+        configuration.setPort(port);
+        configuration.setDatabase(0);
+        return new LettuceConnectionFactory(configuration);
     }
 
     @Bean
     @Qualifier("stockInventory")
-    public RedisConnectionFactory stockConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
-        config.setHostName(host);
-        config.setPort(port);
-        config.setDatabase(1);
-        return new LettuceConnectionFactory(config);
+    public RedisConnectionFactory stockConnectionFactory(){
+        RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
+        configuration.setHostName(host);
+        configuration.setPort(port);
+        configuration.setDatabase(1);
+        return new LettuceConnectionFactory(configuration);
     }
 
     @Bean
     @Qualifier("rtInventory")
-    public RedisTemplate<String, String> redisTemplate(@Qualifier("rtInventory") RedisConnectionFactory factory) {
-        RedisTemplate<String, String> template = new RedisTemplate<>();
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new StringRedisSerializer());
-        template.setConnectionFactory(factory);
-        return template;
+    // Bean들끼리 서로 의존성을 주입받을 때 메서드 파라미터로도 주입받을 수 있다.
+    // 모든 template 중 redisTemplate 이란 이름이 반드시 1개는 있어야 함
+    public RedisTemplate<String, String> redisTemplate(@Qualifier("rtInventory") RedisConnectionFactory redisConnectionFactory){
+        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+        redisTemplate.setKeySerializer(new StringRedisSerializer());
+        redisTemplate.setValueSerializer(new StringRedisSerializer());
+        redisTemplate.setConnectionFactory(redisConnectionFactory);
+        return redisTemplate;
     }
 
     @Bean
     @Qualifier("stockInventory")
-    public RedisTemplate<String, String> stockTemplate(@Qualifier("stockInventory") RedisConnectionFactory factory) {
-        RedisTemplate<String, String> template = new RedisTemplate<>();
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new StringRedisSerializer());
-        template.setConnectionFactory(factory);
-        return template;
+    public RedisTemplate<String, String> stockTemplate(@Qualifier("stockInventory") RedisConnectionFactory redisConnectionFactory){
+        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+        redisTemplate.setKeySerializer(new StringRedisSerializer());
+        redisTemplate.setValueSerializer(new StringRedisSerializer());
+        redisTemplate.setConnectionFactory(redisConnectionFactory);
+        return redisTemplate;
     }
+
 }

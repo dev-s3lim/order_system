@@ -1,5 +1,7 @@
 package com.batch16.ordersystem.ordering.service;
 
+import com.batch16.ordersystem.common.service.StockInventoryService;
+import com.batch16.ordersystem.common.service.StockRabbitMqService;
 import com.batch16.ordersystem.member.domain.Member;
 import com.batch16.ordersystem.member.repository.MemberRepository;
 import com.batch16.ordersystem.ordering.domain.OrderDetail;
@@ -13,6 +15,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -25,6 +28,8 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final MemberRepository memberRepository;
     private final ProductRepository productRepository;
+    private final StockInventoryService stockInventoryService;
+    private final StockRabbitMqService stockRabbitMqService;
 
     @Transactional
     public Long create(List<OrderCreateDto> orderCreateDtoList) {
@@ -60,6 +65,48 @@ public class OrderService {
             ordering.getOrderDetailList().add(detail); // 자식까지 저장되도록 설정
         }
         orderRepository.save(ordering); // 주문 저장
+        return ordering.getId();
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED) // 격리 레벨을 낮추므로서, 성능향상과 lock 관련 문제 원천 차단
+    public Long createConcurrent(List<OrderCreateDto> orderCreateDtoList) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("회원 정보가 없습니다."));
+
+        Ordering ordering = Ordering.builder()
+                .member(member)
+                .build();
+
+        for (OrderCreateDto dto : orderCreateDtoList) {
+            Product product = productRepository.findById(dto.getProductId())
+                    .orElseThrow(() -> new EntityNotFoundException("상품 정보가 없습니다."));
+
+            /* //redis에서 재고 수량 확인 및 감소처리
+            if( product.getStockQuantity() < dto.getProductCount()) {
+                throw new IllegalArgumentException("재고가 부족합니다.");
+            }
+            */
+
+            // product.updateStockQuantity(dto.getProductCount());
+
+            int newQuantity = stockInventoryService.decreaseStockQuantity(product.getId(), dto.getProductCount());
+            if (newQuantity < 0) {
+                throw new IllegalArgumentException("재고가 부족합니다.");
+            }
+
+            OrderDetail detail = OrderDetail.builder()
+                    .ordering(ordering)
+                    .product(product)
+                    .quantity(dto.getProductCount())
+                    .member(member)
+                    .build();
+            ordering.getOrderDetailList().add(detail);
+            // 비동기처리 -> RabbitMQ를 통해 재고 감소 메시지 발행 (레디스로도 충분하나, mq를 통해 사후 처리 가능)
+            stockRabbitMqService.publish(dto.getProductId(), dto.getProductCount());
+        }
+
+        orderRepository.save(ordering);
         return ordering.getId();
     }
 

@@ -21,8 +21,8 @@ public class OrderController {
 
     @PostMapping("/create")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> create(@RequestBody List<OrderCreateDto> dto) {
-        Long orderId = orderService.create(dto);
+    public ResponseEntity<?> createConcurrent(@RequestBody List<OrderCreateDto> dto) {
+        Long orderId = orderService.createConcurrent(dto);
         return ResponseEntity.ok(CommonDto.builder()
                 .result(orderId)
                 .statusCode(HttpStatus.CREATED.value())

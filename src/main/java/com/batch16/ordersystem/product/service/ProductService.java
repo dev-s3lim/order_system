@@ -1,5 +1,6 @@
 package com.batch16.ordersystem.product.service;
 
+import com.batch16.ordersystem.common.service.StockInventoryService;
 import com.batch16.ordersystem.member.domain.Member;
 import com.batch16.ordersystem.member.repository.MemberRepository;
 import com.batch16.ordersystem.product.domain.Product;
@@ -39,6 +40,7 @@ public class ProductService {
     private final S3Client s3Client;
     @Value("${cloud.aws.s3.bucket}")
     private String bucket;
+    private final StockInventoryService stockInventoryService;
 
     public Long save(ProductCreateDto productCreateDto) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -67,6 +69,8 @@ public class ProductService {
             String imgUrl = s3Client.utilities().getUrl(a -> a.bucket(bucket).key(fileName)).toExternalForm();
             product.updateImageUrl(imgUrl);
         }
+
+        stockInventoryService.makeStockQuantity(product.getId(), product.getStockQuantity());
         return product.getId();
     }
 
