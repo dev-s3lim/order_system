@@ -36,5 +36,11 @@ public class Ordering extends BaseTimeEntity {
     @OneToMany(mappedBy = "ordering", cascade = CascadeType.PERSIST) // 자식 엔티티까지 삭제하려면 CascadeType.ALL로 변경
     @Builder.Default
     private List<OrderDetail> orderDetailList = new ArrayList<>();
+/*
+    public void cancel() {
+        this.setOrderStatus = OrderStatus.CANCELED;
+    }
+
+ */
 }
 

@@ -21,9 +21,8 @@ public class StockInventoryService {
     // 주문 성공 시 재고 수량 감소
     public int decreaseStockQuantity(Long productId, int orderQuantity) {
         String remainObject = redisTemplate.opsForValue().get(String.valueOf(productId));
-        int remains = Integer.parseInt(remainObject);
-        if (remains < orderQuantity) {
-            return -1;
+        if (remainObject == null) {
+            return -1; // 또는 throw new IllegalStateException("재고 정보 없음");
         } else {
             Long finalRemains = redisTemplate.opsForValue().decrement(String.valueOf(productId), orderQuantity);
             return finalRemains.intValue();
@@ -32,7 +31,11 @@ public class StockInventoryService {
 
     // 주문 취소 시 재고 수량 증가
     public void increaseStockQuantity(Long productId, Integer quantity) {
-        redisTemplate.opsForValue().increment(String.valueOf(productId), quantity);
+        if (redisTemplate.hasKey(String.valueOf(productId))) {
+            redisTemplate.opsForValue().increment(String.valueOf(productId), quantity);
+        } else {
+            // 등록되지 않은 재고 복구 요청일 경우 예외 or 초기화
+            redisTemplate.opsForValue().set(String.valueOf(productId), String.valueOf(quantity));
+        }
     }
 }
-

@@ -1,5 +1,6 @@
 package com.batch16.ordersystem.ordering.controller;
 
+import com.batch16.ordersystem.common.constant.Role;
 import com.batch16.ordersystem.common.dto.CommonDto;
 import com.batch16.ordersystem.ordering.domain.Ordering;
 import com.batch16.ordersystem.ordering.dto.OrderCreateDto;
@@ -48,6 +49,17 @@ public class OrderController {
                 .result(orderListResDtos)
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("내 주문 내역 조회 완료")
+                .build());
+    }
+
+    @DeleteMapping("/cancel/{orderId}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long orderId) {
+        Ordering ordering = orderService.cancel(orderId);
+        return ResponseEntity.ok(CommonDto.builder()
+                .result(ordering.getId())
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("주문 취소 완료")
                 .build());
     }
 }

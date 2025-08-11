@@ -1,5 +1,7 @@
 package com.batch16.ordersystem.ordering.service;
 
+import com.batch16.ordersystem.common.constant.OrderStatus;
+import com.batch16.ordersystem.common.service.SseAlarmService;
 import com.batch16.ordersystem.common.service.StockInventoryService;
 import com.batch16.ordersystem.common.service.StockRabbitMqService;
 import com.batch16.ordersystem.member.domain.Member;
@@ -30,6 +32,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final StockInventoryService stockInventoryService;
     private final StockRabbitMqService stockRabbitMqService;
+    private final SseAlarmService sseAlarmService;
 
     @Transactional
     public Long create(List<OrderCreateDto> orderCreateDtoList) {
@@ -68,7 +71,8 @@ public class OrderService {
         return ordering.getId();
     }
 
-    @Transactional(isolation = Isolation.READ_COMMITTED) // 격리 레벨을 낮추므로서, 성능향상과 lock 관련 문제 원천 차단
+    // 멀티스레드로 처리 중...
+    @Transactional (isolation = Isolation.READ_COMMITTED)// 격리 레벨을 낮추므로서, 성능향상과 lock 관련 문제 원천 차단
     public Long createConcurrent(List<OrderCreateDto> orderCreateDtoList) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Member member = memberRepository.findByEmail(email)
@@ -90,10 +94,12 @@ public class OrderService {
 
             // product.updateStockQuantity(dto.getProductCount());
 
+            // ******************* 재고 수량 감소 처리 (동시성 문제를 해결하기 위해 Redis를 사용) *******************
             int newQuantity = stockInventoryService.decreaseStockQuantity(product.getId(), dto.getProductCount());
             if (newQuantity < 0) {
                 throw new IllegalArgumentException("재고가 부족합니다.");
             }
+            // ******************* 재고 수량 감소 처리 (동시성 문제를 해결하기 위해 Redis를 사용) *******************
 
             OrderDetail detail = OrderDetail.builder()
                     .ordering(ordering)
@@ -107,6 +113,10 @@ public class OrderService {
         }
 
         orderRepository.save(ordering);
+
+        // 주문 성공 시, 관리자에게 알림 발송
+        sseAlarmService.publishMessage("admin@naver.com", email, ordering.getId());
+
         return ordering.getId();
     }
 
@@ -114,10 +124,39 @@ public class OrderService {
         return orderRepository.findAll().stream().map(o->OrderListResDto.fromEntity(o)).collect(Collectors.toList());
     }
 
-
     public List<OrderListResDto> myOrders(){
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Member member = memberRepository.findByEmail(email).orElseThrow(()-> new EntityNotFoundException("member is not found"));
         return  orderRepository.findAllByMember(member).stream().map(o->OrderListResDto.fromEntity(o)).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public Ordering cancel(Long orderId) {
+        Ordering ordering = orderRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("주문 정보가 없습니다."));
+
+        // 이미 취소된 주문인지 확인
+        if (ordering.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalStateException("이미 취소된 주문입니다.");
+        }
+
+        // 주문 상태 변경
+        ordering.setOrderStatus(OrderStatus.CANCELLED);
+
+        // 주문 상세 내역 순회
+        for (OrderDetail detail : ordering.getOrderDetailList()) {
+            Product product = detail.getProduct();
+            Long productId = product.getId();
+            int quantity = detail.getQuantity();
+
+            // 1. Redis 재고 복구
+            stockInventoryService.increaseStockQuantity(productId, quantity);
+
+            // 2. RDB 재고 복구
+            product.updateStockQuantity(-quantity); // 주문 취소이므로 재고 수량을 증가시킴
+            productRepository.save(product); // 변경된 상품 정보 저장
+        }
+
+        return ordering;
     }
 }

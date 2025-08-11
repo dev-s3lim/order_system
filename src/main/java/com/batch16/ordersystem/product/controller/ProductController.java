@@ -47,6 +47,7 @@ public class ProductController {
         );
     }
 
+    // 상세는 캐싱 처리 (이미지 등은 빨리 성능 높여서 불러와야 하기때문에 -> redis 등 캐싱 처리)
     @GetMapping("/detail/{id}")
     public ResponseEntity<?> findById(@PathVariable Long id) {
         ProductResDto productResDto = productService.findById(id);

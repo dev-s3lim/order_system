@@ -55,5 +55,4 @@ public class Product extends BaseTimeEntity {
     public void updateStockQuantity(Integer orderedQuantity) {
         this.stockQuantity -= orderedQuantity;
     }
-
 }

@@ -49,6 +49,7 @@ public class StockRabbitMqService {
     }
      */
 
+    // 싱글스레드로 실행 중...
     @Transactional
     @RabbitListener(queues = "stockDecreaseQueue")
     public void subscribe(Message message) {
